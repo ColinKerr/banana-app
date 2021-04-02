@@ -19,6 +19,13 @@ const App: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search.toLowerCase());
+    setiModelId (urlParams.get("imodelid") ?? "");
+    setContextId(urlParams.get("contextid") ?? "");
+  }, [isLoggingIn]);
+
+
+  useEffect(() => {
     const initOidc = async () => {
       if (!AuthorizationClient.oidcClient) {
         await AuthorizationClient.initializeOidc();
@@ -41,6 +48,12 @@ const App: React.FC = () => {
     }
   }, [isAuthorized, isLoggingIn]);
 
+  useEffect(() => {
+    if (isAuthorized && iModelId !== "" && contextId !== "") {
+      setIsConnected(true);
+    }
+  }, [isAuthorized, iModelId, contextId]);
+
   const onLoginClick = async () => {
     setIsLoggingIn(true);
     await AuthorizationClient.signIn();
@@ -56,11 +69,22 @@ const App: React.FC = () => {
     setContextId(e.target.value);
   }
 
+  const updateUrl = (iModelId: string, contextId: string) => {
+    const urlParams = new URLSearchParams(window.location.search.toLowerCase());
+    if (urlParams.get("imodelid") !== iModelId || urlParams.get("contextid") !== contextId) {
+      urlParams.set("imodelid", iModelId);
+      urlParams.set("contextid", contextId);
+      const newUrl = `${window.location.protocol}//${window.location.host}/?${urlParams.toString()}`;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }
+
   const oniModelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setiModelId(e.target.value);
   }
 
   const onConnectClick = async () => {
+    updateUrl(iModelId, contextId);
     setIsConnected(true);
   }
 
@@ -79,7 +103,7 @@ const App: React.FC = () => {
       {isLoggingIn ? (
         <span>"Logging in...."</span>
       ) : !isConnected ? (
-        <span>"Entery context and iModel Ids then click Connect</span>
+        <span>Enter context and iModel Ids then click Connect</span>
       ) : (
         isAuthorized && (
           <Viewer
